@@ -1,0 +1,852 @@
+{% extends "base.html" %}
+
+{% block title %}Semantic Search - Vector DB Explorer{% endblock %}
+
+{% block head %}
+<style>
+    /* Design System */
+    :root {
+        --color-primary: #4f46e5;
+        --color-primary-light: #818cf8;
+        --color-primary-dark: #3730a3;
+        --color-text-primary: #111827;
+        --color-text-secondary: #4b5563;
+        --color-text-tertiary: #9ca3af;
+        --color-background: #f9fafb;
+        --color-surface: #ffffff;
+        --color-border: #e5e7eb;
+        --color-border-light: #f3f4f6;
+        --color-success: #10b981;
+        --color-warning: #f59e0b;
+        --color-error: #ef4444;
+        --color-info: #3b82f6;
+        --radius-sm: 6px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --radius-xl: 16px;
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        --transition-all: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body {
+        background-color: var(--color-background);
+        color: var(--color-text-primary);
+    }
+
+    .card {
+        background-color: var(--color-surface);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid var(--color-border-light);
+        overflow: hidden;
+        transition: var(--transition-all);
+    }
+
+    .card:hover {
+        box-shadow: var(--shadow-xl);
+    }
+
+    .card-header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid var(--color-border-light);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+    
+    /* General styles */
+    .similarity-container {
+        width: 65px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-md);
+        background-color: white;
+        border: 1px solid var(--color-border);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .similarity-score {
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: var(--color-text-primary);
+        transition: var(--transition-all);
+    }
+    
+    .score-high .similarity-score {
+        color: var(--color-success);
+    }
+
+    .score-high.similarity-container {
+        background-color: rgba(16, 185, 129, 0.1);
+        border-color: var(--color-success);
+    }
+    
+    .score-medium .similarity-score {
+        color: var(--color-warning);
+    }
+
+    .score-medium.similarity-container {
+        background-color: rgba(245, 158, 11, 0.1);
+        border-color: var(--color-warning);
+    }
+    
+    .score-low .similarity-score {
+        color: var(--color-error);
+    }
+
+    .score-low.similarity-container {
+        background-color: rgba(239, 68, 68, 0.1);
+        border-color: var(--color-error);
+    }
+
+    .result-card {
+        background-color: var(--color-surface);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        transition: var(--transition-all);
+        overflow: hidden;
+        border: 1px solid var(--color-border-light);
+    }
+
+    .result-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .embedding-preview {
+        max-height: 120px;
+        overflow-y: auto;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 0.75rem;
+        line-height: 1.25;
+        background-color: var(--color-surface);
+        padding: 1rem;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--color-border-light);
+    }
+
+    /* Enhanced input and select styles */
+    .input, .select, #search-query, #top-k, #collection-select {
+        width: 100%;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: 0.875rem 1.25rem;
+        background-color: white;
+        color: var(--color-text-primary);
+        font-size: 0.95rem;
+        line-height: 1.5;
+        transition: var(--transition-all);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .input:focus, .select:focus, 
+    #search-query:focus, #top-k:focus, #collection-select:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+    }
+
+    .input:hover, .select:hover,
+    #search-query:hover, #top-k:hover, #collection-select:hover {
+        border-color: var(--color-primary-light);
+    }
+
+    textarea#search-query {
+        resize: vertical;
+        min-height: 100px;
+    }
+
+    /* Label styling */
+    label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: var(--color-text-primary);
+    }
+
+    /* Enhanced checkbox styles */
+    input[type="checkbox"] {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px !important;
+        height: 20px !important;
+        border: 2px solid var(--color-border);
+        border-radius: 4px;
+        background-color: white;
+        cursor: pointer;
+        position: relative;
+        vertical-align: middle;
+        margin-right: 8px;
+        transition: var(--transition-all);
+    }
+    
+    input[type="checkbox"]:checked {
+        background-color: var(--color-primary);
+        border-color: var(--color-primary);
+    }
+    
+    input[type="checkbox"]:checked::after {
+        content: '';
+        position: absolute;
+        left: 6px;
+        top: 2px;
+        width: 6px;
+        height: 11px;
+        border: solid white;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+    }
+
+    /* Checkbox label hover effect */
+    .checkbox:hover input[type="checkbox"]:not(:checked) {
+        border-color: var(--color-primary-light);
+    }
+    
+    /* Button styles */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--radius-md);
+        font-weight: 500;
+        transition: all 0.2s;
+        cursor: pointer;
+        box-shadow: var(--shadow-sm);
+        border: none;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .btn::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 5px;
+        height: 5px;
+        background: rgba(255, 255, 255, 0.5);
+        opacity: 0;
+        border-radius: 100%;
+        transform: scale(1, 1) translate(-50%);
+        transform-origin: 50% 50%;
+    }
+    
+    .btn:focus:not(:active)::after {
+        animation: ripple 1s ease-out;
+    }
+    
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+    
+    .btn:active {
+        transform: translateY(0);
+    }
+
+    .btn-primary {
+        background-color: var(--color-primary);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: var(--color-primary-dark);
+    }
+    
+    .btn-secondary {
+        background-color: white;
+        color: var(--color-text-secondary);
+        border: 1px solid var(--color-border);
+    }
+
+    .btn-secondary:hover {
+        background-color: var(--color-surface);
+        color: var(--color-text-primary);
+        border-color: var(--color-primary-light);
+    }
+
+    /* Section headers */
+    h2.section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: var(--color-text-primary);
+        display: flex;
+        align-items: center;
+    }
+
+    h2.section-title::before {
+        content: '';
+        display: inline-block;
+        width: 3px;
+        height: 20px;
+        background-color: var(--color-primary);
+        margin-right: 10px;
+        border-radius: 2px;
+    }
+
+    /* Question and answer styling */
+    .question-block {
+        background-color: #f3f4f6;
+        border-radius: var(--radius-md);
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        border-left: 3px solid var(--color-primary);
+    }
+
+    .answer-block {
+        background-color: #f8fafc;
+        border-radius: var(--radius-md);
+        padding: 1rem;
+        border-left: 3px solid var(--color-success);
+    }
+
+    /* Loading animation */
+    @keyframes spinner {
+        to {transform: rotate(360deg);}
+    }
+
+    /* Button ripple effect */
+    @keyframes ripple {
+        0% {
+            transform: scale(0, 0);
+            opacity: 1;
+        }
+        20% {
+            transform: scale(25, 25);
+            opacity: 1;
+        }
+        100% {
+            opacity: 0;
+            transform: scale(40, 40);
+        }
+    }
+    
+    /* Animations */
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes slideIn {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    
+    @keyframes scaleIn {
+        from { transform: scale(0.95); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+    }
+    
+    .fade-in {
+        animation: fadeIn 0.4s ease-in-out;
+    }
+    
+    .slide-in {
+        animation: slideIn 0.4s ease-in-out;
+    }
+    
+    .scale-in {
+        animation: scaleIn 0.4s ease-in-out;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="slide-in p-6 max-w-7xl mx-auto space-y-6">
+        <!-- Header -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h1 class="card-title flex items-center">
+                    <i class="fas fa-search-location text-primary-600 mr-3"></i>
+                    Vector Search
+                </h1>
+                <p class="text-sm text-gray-500 mt-1">Discover insights with semantic search powered by neural embeddings</p>
+            </div>
+        </div>
+        </div>
+        
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Search Form -->
+        <div>
+            <div class="card fade-in">
+                <div class="card-header">
+                    <h2 class="section-title text-lg font-semibold text-gray-800 m-0">Search Options</h2>
+                </div>
+                
+                <div class="card-body">
+                    <form id="search-form" class="space-y-5">
+                        <div>
+                            <label for="collection-select" class="text-sm font-medium text-gray-700 block mb-1">Collection</label>
+                            <div class="relative">
+                                <select id="collection-select" class="select w-full appearance-none pr-10">
+                                {% for collection in collections %}
+                                <option value="{{ collection }}" {% if collection == selected %}selected{% endif %}>{{ collection }}</option>
+                                {% endfor %}
+                            </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3">
+                                    <i class="fas fa-chevron-down text-gray-400"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label for="search-query" class="text-sm font-medium text-gray-700 block mb-1">Search Query</label>
+                            <textarea id="search-query" rows="3" class="input w-full" placeholder="Enter your search query here..."></textarea>
+                            <div class="flex justify-end mt-1">
+                                <span id="query-length" class="text-xs text-gray-500">0 characters</span>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label for="top-k" class="text-sm font-medium text-gray-700 block mb-1">Number of Results</label>
+                            <input type="number" id="top-k" min="1" max="50" value="5" class="input w-full">
+                        </div>
+                        
+                        <div class="border-t border-gray-200 pt-4">
+                        <h3 class="text-sm font-medium text-gray-700 mb-3">Include Fields</h3>
+                        
+                        <div class="space-y-3">
+                                <label class="checkbox flex items-start hover:bg-gray-50 p-2 rounded-md transition-colors">
+                                    <input id="include-documents" type="checkbox" checked class="mt-1">
+                                <div class="ml-3 text-sm">
+                                        <span class="font-medium text-gray-700">Documents</span>
+                                    <p class="text-gray-500">The text content</p>
+                                </div>
+                                </label>
+                            
+                                <label class="checkbox flex items-start hover:bg-gray-50 p-2 rounded-md transition-colors">
+                                    <input id="include-metadatas" type="checkbox" checked class="mt-1">
+                                <div class="ml-3 text-sm">
+                                        <span class="font-medium text-gray-700">Metadatas</span>
+                                    <p class="text-gray-500">JSON metadata</p>
+                                </div>
+                                </label>
+                            
+                                <label class="checkbox flex items-start hover:bg-gray-50 p-2 rounded-md transition-colors">
+                                    <input id="include-embeddings" type="checkbox" class="mt-1">
+                                <div class="ml-3 text-sm">
+                                        <span class="font-medium text-gray-700">Embeddings</span>
+                                    <p class="text-gray-500">Numeric vectors</p>
+                                </div>
+                                </label>
+                                </div>
+                            </div>
+                            
+                        <div class="pt-2 flex space-x-3">
+                            <button type="submit" class="btn btn-primary flex-1">
+                                <i class="fas fa-search mr-2"></i> Search
+                            </button>
+                            <button type="button" id="clear-search" class="btn btn-secondary">
+                                <i class="fas fa-undo"></i>
+                                </button>
+                        </div>
+                    </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Search Results -->
+            <div class="lg:col-span-2">
+                <!-- Loading State -->
+                <div id="loading" class="hidden py-12 text-center">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-3 border-primary-600 border-b-3 border-primary-300"></div>
+                    <p class="mt-4 text-gray-600">Searching...</p>
+                </div>
+                
+                <!-- Empty State (Initial) -->
+            <div id="empty-initial" class="card fade-in">
+                <div class="card-body py-12 text-center">
+                    <div class="inline-flex items-center justify-center h-20 w-20 rounded-full bg-primary-100 text-primary-600 mb-6">
+                        <i class="fas fa-search text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2">Start Your Search</h3>
+                    <p class="text-gray-600 max-w-md mx-auto">Enter a query and click Search to find semantically similar documents.</p>
+                </div>
+                </div>
+                
+                <!-- Empty State (No Results) -->
+            <div id="empty-results" class="hidden card fade-in">
+                <div class="card-body py-12 text-center">
+                    <div class="inline-flex items-center justify-center h-20 w-20 rounded-full bg-yellow-100 text-yellow-600 mb-6">
+                        <i class="fas fa-exclamation-triangle text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2">No Results Found</h3>
+                    <p class="text-gray-600 max-w-md mx-auto">Try a different query or collection.</p>
+                </div>
+                </div>
+                
+                <!-- Results Container -->
+                <div id="results-container" class="hidden">
+                <div class="card fade-in">
+                    <div class="card-header">
+                        <h2 class="section-title text-lg font-semibold text-gray-800 m-0">Search Results</h2>
+                        <div class="text-xs font-medium text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full" id="search-time"></div>
+                    </div>
+                    <div class="card-body">
+                        <div id="corrected-query-container" class="hidden mb-4 p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                            <p class="text-sm text-blue-800 flex items-center">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                <span class="font-medium">Corrected query:</span> 
+                                <span id="corrected-query" class="italic ml-2"></span>
+                            </p>
+                        </div>
+                        
+                        <div id="results-list" class="space-y-5">
+                            <!-- Results will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Result Template (hidden) -->
+<template id="result-template">
+    <div class="result-card p-5">
+        <div class="flex items-start">
+            <div class="similarity-container mr-4">
+                <div class="similarity-score"></div>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="document-container mb-4">
+                    <h4 class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 flex items-center">
+                        <i class="fas fa-question-circle mr-1 text-primary-400"></i>
+                        Question
+                    </h4>
+                    <div class="document question-block text-sm text-gray-800"></div>
+                </div>
+                
+                <div class="answer-container mb-4">
+                    <h4 class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 flex items-center">
+                        <i class="fas fa-comment-dots mr-1 text-green-500"></i>
+                        Answer
+                    </h4>
+                    <div class="answer answer-block text-sm text-gray-800"></div>
+                </div>
+                
+                <div class="metadata-container hidden mb-4">
+                    <h4 class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Metadata</h4>
+                    <div class="metadata-view rounded-lg border border-gray-100">
+                        <pre class="metadata text-xs text-gray-800"></pre>
+                        </div>
+                    </div>
+                    
+                <div class="embedding-container hidden">
+                    <h4 class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Embedding</h4>
+                    <div class="embedding-preview">
+                        <pre class="embedding text-xs text-gray-800"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // DOM Elements
+    const searchForm = document.getElementById('search-form');
+    const collectionSelect = document.getElementById('collection-select');
+    const searchQuery = document.getElementById('search-query');
+    const topK = document.getElementById('top-k');
+    const includeDocuments = document.getElementById('include-documents');
+    const includeMetadatas = document.getElementById('include-metadatas');
+    const includeEmbeddings = document.getElementById('include-embeddings');
+    const clearSearchBtn = document.getElementById('clear-search');
+    const queryLength = document.getElementById('query-length');
+    
+    const loadingEl = document.getElementById('loading');
+    const emptyInitialEl = document.getElementById('empty-initial');
+    const emptyResultsEl = document.getElementById('empty-results');
+    const resultsContainer = document.getElementById('results-container');
+    const resultsList = document.getElementById('results-list');
+    const searchTimeEl = document.getElementById('search-time');
+    const correctedQueryContainer = document.getElementById('corrected-query-container');
+    const correctedQueryEl = document.getElementById('corrected-query');
+    
+    // Character counter for search query
+    searchQuery.addEventListener('input', function() {
+        queryLength.textContent = `${this.value.length} characters`;
+    });
+    
+    // Preselect collection from URL if present
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const collectionParam = urlParams.get('collection');
+        
+        if (collectionParam) {
+            const option = Array.from(collectionSelect.options).find(opt => opt.value === collectionParam);
+            if (option) {
+                option.selected = true;
+        }
+        }
+        
+        // Focus search input
+        setTimeout(() => {
+            searchQuery.focus();
+        }, 500);
+    });
+        
+        // Search form submission
+    searchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+        
+        // Add button animation
+        const submitBtn = searchForm.querySelector('button[type="submit"]');
+        animateButton(submitBtn);
+        
+        // Get query parameters
+        const collection = collectionSelect.value;
+        const query = searchQuery.value.trim();
+        const k = parseInt(topK.value);
+            
+        // Validate input
+        if (!query) {
+            showNotification('error', 'Please enter a search query');
+            searchQuery.focus();
+            return;
+        }
+        
+        // Update UI state
+        emptyInitialEl.classList.add('hidden');
+        emptyResultsEl.classList.add('hidden');
+            resultsContainer.classList.add('hidden');
+        loadingEl.classList.remove('hidden');
+    
+        // Get include fields
+        const include = [];
+        if (includeDocuments.checked) include.push('documents');
+        if (includeMetadatas.checked) include.push('metadatas');
+        if (includeEmbeddings.checked) include.push('embeddings');
+        
+        // Ensure at least one field is included
+        if (include.length === 0) {
+            include.push('documents');
+            includeDocuments.checked = true;
+        }
+        
+        // Perform search
+        const startTime = performance.now();
+        
+        fetch('/api/search', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                collection: collection,
+                query: query,
+                n_results: k,
+                include: include
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            const endTime = performance.now();
+            const searchTime = ((endTime - startTime) / 1000).toFixed(2);
+            
+            // Update UI state
+            loadingEl.classList.add('hidden');
+            
+            // Show corrected query if available
+            if (data.corrected_query && data.corrected_query !== query) {
+                correctedQueryEl.textContent = data.corrected_query;
+                correctedQueryContainer.classList.remove('hidden');
+            } else {
+                correctedQueryContainer.classList.add('hidden');
+            }
+            
+            // Display search time
+            searchTimeEl.textContent = `${searchTime} seconds`;
+            
+            // Handle results
+            if (data.results && data.results.length > 0) {
+                displayResults(data.results);
+            resultsContainer.classList.remove('hidden');
+                
+                // Scroll to results if needed
+                if (window.innerWidth < 1024) {
+                    resultsContainer.scrollIntoView({ behavior: 'smooth' });
+                }
+            } else {
+                emptyResultsEl.classList.remove('hidden');
+            }
+        })
+        .catch(error => {
+            console.error('Search error:', error);
+            loadingEl.classList.add('hidden');
+            emptyResultsEl.classList.remove('hidden');
+            showNotification('error', 'An error occurred while searching');
+        });
+    });
+    
+    // Clear search
+    clearSearchBtn.addEventListener('click', function() {
+        searchQuery.value = '';
+        queryLength.textContent = '0 characters';
+        topK.value = 5;
+        searchQuery.focus();
+        
+        // Reset result views
+        resultsList.innerHTML = '';
+        emptyResultsEl.classList.add('hidden');
+        resultsContainer.classList.add('hidden');
+        emptyInitialEl.classList.remove('hidden');
+        
+        // Animate button
+        animateButton(this);
+    });
+    
+    // Animation helper
+    function animateButton(button) {
+        button.classList.add('animate-pulse');
+        setTimeout(() => {
+            button.classList.remove('animate-pulse');
+        }, 300);
+    }
+    
+    // Show notification
+    function showNotification(type, message) {
+        // Create notification element if it doesn't exist
+        let notification = document.getElementById('notification');
+        if (!notification) {
+            notification = document.createElement('div');
+            notification.id = 'notification';
+            notification.className = 'fixed top-4 right-4 z-50 p-4 rounded-xl shadow-lg transform transition-all duration-300 translate-x-full';
+            document.body.appendChild(notification);
+        }
+        
+        // Set notification style based on type
+        if (type === 'success') {
+            notification.className = 'fixed top-4 right-4 z-50 p-4 rounded-xl shadow-lg transform transition-all duration-300 bg-green-50 border border-green-200 text-green-700';
+        } else {
+            notification.className = 'fixed top-4 right-4 z-50 p-4 rounded-xl shadow-lg transform transition-all duration-300 bg-red-50 border border-red-200 text-red-700';
+    }
+    
+        // Set notification content
+        notification.innerHTML = `
+            <div class="flex items-center">
+                <div class="mr-3">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} text-xl"></i>
+                </div>
+                <div>
+                    <p>${message}</p>
+                </div>
+                <button class="ml-4 text-gray-500 hover:text-gray-700 focus:outline-none" onclick="this.parentElement.parentElement.classList.add('translate-x-full');">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        
+        // Show notification with animation
+        setTimeout(() => {
+            notification.classList.remove('translate-x-full');
+        }, 100);
+        
+        // Auto-hide after 5 seconds with animation
+        setTimeout(() => {
+            notification.classList.add('translate-x-full');
+            // Remove after animation completes
+            setTimeout(() => {
+                if (notification.classList.contains('translate-x-full')) {
+                    notification.remove();
+                }
+            }, 300);
+        }, 5000);
+    }
+    
+    // Display search results
+    function displayResults(results) {
+        resultsList.innerHTML = '';
+        const template = document.getElementById('result-template');
+        
+        results.forEach((result, index) => {
+            // Clone template
+            const resultElement = template.content.cloneNode(true);
+            
+            // Set staggered animation
+            const resultCard = resultElement.querySelector('.result-card');
+            resultCard.style.animation = `scaleIn 0.3s ease forwards ${index * 0.05}s`;
+            resultCard.style.opacity = '0';
+            
+            // Set similarity score as decimal value with 4 decimal places
+            const score = result.distance || result.score || 0;
+            const scoreElement = resultElement.querySelector('.similarity-score');
+            
+            // Set score display value (decimal up to 4 places)
+            const displayScore = score.toFixed(4);
+            scoreElement.textContent = displayScore;
+            
+            // Set color based on score (1.0 - score for color since lower distance is better)
+            const normalizedScore = 1.0 - score;
+            const scoreContainer = resultElement.querySelector('.similarity-container');
+            
+            if (normalizedScore >= 0.8) {
+                scoreContainer.classList.add('score-high');
+            } else if (normalizedScore >= 0.5) {
+                scoreContainer.classList.add('score-medium');
+            } else {
+                scoreContainer.classList.add('score-low');
+            }
+            
+            // Set document (question)
+            const documentContainer = resultElement.querySelector('.document-container');
+            const documentElement = resultElement.querySelector('.document');
+            
+            if (result.document) {
+                documentElement.textContent = result.document;
+            } else {
+                documentContainer.classList.add('hidden');
+            }
+            
+            // Set answer
+            const answerContainer = resultElement.querySelector('.answer-container');
+            const answerElement = resultElement.querySelector('.answer');
+            
+            if (result.answer) {
+                answerElement.textContent = result.answer;
+            } else if (result.metadata && result.metadata.answer) {
+                answerElement.textContent = result.metadata.answer;
+            } else {
+                answerContainer.classList.add('hidden');
+            }
+            
+            // Always hide metadata
+            const metadataContainer = resultElement.querySelector('.metadata-container');
+            metadataContainer.classList.add('hidden');
+            
+            // Set embedding (hidden by default)
+            const embeddingContainer = resultElement.querySelector('.embedding-container');
+            
+            if (includeEmbeddings.checked && result.embedding && result.embedding.length > 0) {
+                const embeddingElement = resultElement.querySelector('.embedding');
+                embeddingElement.textContent = JSON.stringify(result.embedding, null, 2);
+                embeddingContainer.classList.remove('hidden');
+    }
+    
+            // Add to results list
+            resultsList.appendChild(resultElement);
+        });
+    }
+</script>
+{% endblock %} 

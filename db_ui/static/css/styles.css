@@ -1,0 +1,88 @@
+/* Custom CSS Styles */
+
+/* TailwindCSS extras */
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Transitions */
+.transition-colors {
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+
+.transition-shadow {
+    transition: box-shadow 0.3s;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Active view indicator */
+.active-view {
+    background-color: #f3f4f6;
+    border-color: #6b7280;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Truncate long text */
+.truncate-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Responsive font sizes */
+@media (max-width: 640px) {
+    .text-2xl {
+        font-size: 1.25rem;
+    }
+    .text-xl {
+        font-size: 1.1rem;
+    }
+    .text-lg {
+        font-size: 1rem;
+    }
+}
+
+/* Fix for mobile devices */
+@media (max-width: 768px) {
+    .metadata-view {
+        max-height: 150px;
+    }
+} 

@@ -1,0 +1,1258 @@
+{% extends "base.html" %}
+
+{% block title %}{{ collection }} - Vector DB Explorer{% endblock %}
+
+{% block head %}
+<style>
+    /* Design System */
+    :root {
+        --color-primary: #3f51b5;
+        --color-primary-light: #757de8;
+        --color-primary-dark: #2c3e8f;
+        --color-text-primary: #212121;
+        --color-text-secondary: #616161;
+        --color-text-tertiary: #8e8e8e;
+        --color-background: #ffffff;
+        --color-surface: #f9fafb;
+        --color-border: #ebedf0;
+        --color-border-light: #f3f4f6;
+        --color-success: #4caf50;
+        --color-warning: #ff9800;
+        --color-error: #f44336;
+        --color-info: #2196f3;
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --radius-xl: 16px;
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --transition-all: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* General styles */
+    .card {
+        background-color: var(--color-background);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        transition: var(--transition-all);
+        overflow: hidden;
+    }
+    
+    .card:hover {
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .card-header {
+        padding: 1.25rem;
+        border-bottom: 1px solid var(--color-border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .card-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+    }
+    
+    .card-body {
+        padding: 1.25rem;
+    }
+    
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-md);
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        font-size: 0.875rem;
+        transition: var(--transition-all);
+        cursor: pointer;
+    }
+    
+    .btn-icon {
+        width: 1.5rem;
+        height: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-md);
+        transition: var(--transition-all);
+        cursor: pointer;
+    }
+    
+    .btn-primary {
+        background-color: var(--color-primary);
+        color: white;
+        border: none;
+    }
+    
+    .btn-primary:hover {
+        background-color: var(--color-primary-light);
+    }
+    
+    .btn-secondary {
+        background-color: white;
+        color: var(--color-text-primary);
+        border: 1px solid var(--color-border);
+    }
+    
+    .btn-secondary:hover {
+        background-color: var(--color-surface);
+    }
+    
+    .input {
+        display: block;
+        width: 100%;
+        padding: 0.625rem 0.875rem;
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+        color: var(--color-text-primary);
+        background-color: white;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        transition: var(--transition-all);
+    }
+    
+    .input:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(63, 81, 181, 0.12);
+    }
+    
+    .select {
+        display: block;
+        width: 100%;
+        padding: 0.625rem 2.5rem 0.625rem 0.875rem;
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+        color: var(--color-text-primary);
+        background-color: white;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+        background-position: right 0.5rem center;
+        background-repeat: no-repeat;
+        background-size: 1.5em 1.5em;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        transition: var(--transition-all);
+    }
+    
+    .select:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(63, 81, 181, 0.12);
+    }
+    
+    .checkbox {
+        display: grid;
+        grid-template-columns: 1em auto;
+        gap: 0.5em;
+        color: var(--color-text-primary);
+        cursor: pointer;
+    }
+    
+    .checkbox input[type="checkbox"] {
+        appearance: none;
+        background-color: white;
+        margin: 0;
+        font: inherit;
+        color: currentColor;
+        width: 1.25rem;
+        height: 1.25rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+        transform: translateY(-0.075em);
+        display: grid;
+        place-content: center;
+        transition: var(--transition-all);
+    }
+    
+    .checkbox input[type="checkbox"]::before {
+        content: "";
+        width: 0.65em;
+        height: 0.65em;
+        transform: scale(0);
+        transition: 120ms transform ease-in-out;
+        box-shadow: inset 1em 1em var(--color-primary);
+        transform-origin: center;
+        clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+    }
+    
+    .checkbox input[type="checkbox"]:checked {
+        background-color: var(--color-primary);
+        border-color: var(--color-primary);
+    }
+    
+    .checkbox input[type="checkbox"]:checked::before {
+        transform: scale(1);
+        box-shadow: inset 1em 1em white;
+    }
+    
+    .checkbox input[type="checkbox"]:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(63, 81, 181, 0.12);
+    }
+    
+    /* App-specific styles */
+    .metadata-view {
+        max-height: 200px;
+        overflow-y: auto;
+        background-color: var(--color-surface);
+        border-radius: var(--radius-md);
+        padding: 1rem;
+        border: 1px solid var(--color-border-light);
+    }
+    
+    .embedding-view {
+        max-height: 150px;
+        overflow-y: auto;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 0.75rem;
+        line-height: 1.25;
+        background-color: var(--color-surface);
+        padding: 1rem;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--color-border-light);
+    }
+    
+    .binary-data-view {
+        max-height: 100px;
+        overflow-y: auto;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 0.75rem;
+        line-height: 1.25;
+        word-break: break-all;
+        background-color: var(--color-surface);
+        padding: 1rem;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--color-border-light);
+    }
+    
+    .metadata-item {
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--color-border-light);
+    }
+    
+    .metadata-item:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+    
+    .metadata-json {
+        margin-top: 0.5rem;
+        background-color: var(--color-surface);
+        padding: 0.75rem;
+        border-radius: var(--radius-md);
+        font-size: 0.75rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        border: 1px solid var(--color-border-light);
+    }
+    
+    /* Animations */
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes slideIn {
+        from { transform: translateY(10px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    
+    .fade-in {
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    
+    .slide-in {
+        animation: slideIn 0.3s ease-in-out;
+    }
+    
+    /* Table styles */
+    .table-container {
+        overflow-x: auto;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--color-border-light);
+    }
+    
+    .table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    
+    .table th {
+        background-color: var(--color-surface);
+        color: var(--color-text-secondary);
+        font-weight: 500;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0.75rem 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--color-border);
+    }
+    
+    .table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--color-border-light);
+        color: var(--color-text-primary);
+        transition: var(--transition-all);
+    }
+    
+    .table tr:last-child td {
+        border-bottom: none;
+    }
+    
+    .table tr:hover td {
+        background-color: var(--color-surface);
+    }
+    
+    /* Card view styles */
+    .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .item-card {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        background-color: white;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+        transition: var(--transition-all);
+        border: 1px solid var(--color-border-light);
+        overflow: hidden;
+    }
+    
+    .item-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+    
+    /* Pagination styles */
+    .pagination {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .page-item {
+        margin: 0 0.25rem;
+    }
+    
+    .page-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: var(--radius-md);
+        background-color: white;
+        color: var(--color-text-primary);
+        border: 1px solid var(--color-border);
+        transition: var(--transition-all);
+    }
+    
+    .page-link:hover {
+        background-color: var(--color-surface);
+    }
+    
+    .page-link.active {
+        background-color: var(--color-primary);
+        color: white;
+        border-color: var(--color-primary);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="slide-in p-6 max-w-7xl mx-auto space-y-6">
+    <!-- Header with collection info -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h1 class="card-title">{{ collection }}</h1>
+                <p class="text-sm text-gray-500 mt-1">Explore and manage vector database collection</p>
+            </div>
+            <a href="{{ url_for('search_page') }}?collection={{ collection }}" class="btn btn-primary">
+                <i class="fas fa-search mr-2"></i> Search Collection
+            </a>
+        </div>
+    </div>
+    
+    <!-- Rest of content follows -->
+
+    <!-- Data Selection Panel -->
+    <div class="card fade-in">
+        <div class="card-header">
+            <h2 class="text-lg font-semibold text-gray-800">Data Selection</h2>
+            <button id="filter-toggle" class="btn-icon text-gray-500 hover:text-gray-700">
+                <i class="fas fa-chevron-down"></i>
+            </button>
+        </div>
+        
+        <div id="filter-section" class="card-body">
+            <div class="border-t border-gray-200 pt-4">
+                <h3 class="text-sm font-medium text-gray-700 mb-3">Select data to include:</h3>
+                
+                <div class="space-y-3">
+                    <label class="checkbox flex items-start">
+                        <input id="include-documents" type="checkbox" checked class="mt-1">
+                        <div class="ml-3 text-sm">
+                            <span class="font-medium text-gray-700">Documents</span>
+                            <p class="text-gray-500">The text content of each record</p>
+                        </div>
+                    </label>
+                    
+                    <label class="checkbox flex items-start">
+                        <input id="include-metadatas" type="checkbox" checked class="mt-1">
+                        <div class="ml-3 text-sm">
+                            <span class="font-medium text-gray-700">Metadatas</span>
+                            <p class="text-gray-500">JSON metadata associated with each document</p>
+                        </div>
+                    </label>
+                    
+                    <label class="checkbox flex items-start">
+                        <input id="include-embeddings" type="checkbox" class="mt-1">
+                        <div class="ml-3 text-sm">
+                            <span class="font-medium text-gray-700">Embeddings</span>
+                            <p class="text-gray-500">Vector representations of documents</p>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="flex justify-end pt-3 mt-4">
+                <button id="apply-filters" class="btn btn-primary">
+                    <i class="fas fa-check mr-2"></i> Apply
+                </button>
+                <button id="clear-filters" class="btn btn-secondary ml-3">
+                    <i class="fas fa-undo mr-2"></i> Reset
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Display Options -->
+    <div class="card fade-in">
+        <div class="card-header">
+            <h2 class="text-lg font-semibold text-gray-800">Display Options</h2>
+        </div>
+        
+        <div class="card-body">
+            <div class="flex flex-col sm:flex-row items-center justify-between">
+                <div class="flex items-center space-x-4 mb-4 sm:mb-0">
+                    <label for="page-size" class="text-sm font-medium text-gray-700">Rows per page:</label>
+                    <select id="page-size" class="select w-24">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+                
+                <div class="flex items-center space-x-2">
+                    <button id="view-table" class="btn btn-secondary active-view">
+                        <i class="fas fa-table mr-2"></i> Table
+                    </button>
+                    <button id="view-cards" class="btn btn-secondary">
+                        <i class="fas fa-th-large mr-2"></i> Cards
+                    </button>
+                    <a href="{{ url_for('fix_misspellings', collection_name=collection) }}" id="fix-misspellings" class="btn btn-secondary">
+                        <i class="fas fa-spell-check mr-2"></i> Fix Misspellings
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading" class="hidden py-12 text-center">
+        <div class="inline-block animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary-600"></div>
+        <p class="mt-4 text-gray-600">Loading records...</p>
+    </div>
+
+    <!-- Table View -->
+    <div id="table-view" class="card fade-in">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">ID</th>
+                        <th scope="col" class="document-col">Document</th>
+                        <th scope="col" class="answer-col">Answer</th>
+                        <th scope="col" class="w-20">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <!-- Table rows will be populated via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden py-16 text-center">
+            <div class="mb-4">
+                <i class="fas fa-database text-gray-300 text-5xl"></i>
+            </div>
+            <p class="text-gray-600 mb-4">No records found with the current filters.</p>
+            <button id="reset-filters" class="btn btn-secondary">
+                Reset Filters
+            </button>
+        </div>
+    </div>
+
+    <!-- Card View -->
+    <div id="card-view" class="hidden fade-in">
+        <div id="card-container" class="card-grid">
+            <!-- Cards will be populated via JavaScript -->
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="flex items-center justify-between pt-5 pb-2">
+        <div>
+            <p class="text-sm text-gray-700">
+                Showing <span id="record-range" class="font-medium">0-0</span> of <span id="total-records" class="font-medium">0</span> results
+            </p>
+        </div>
+        <div>
+            <nav class="pagination" aria-label="Pagination">
+                <button id="prev-page" class="page-link" disabled>
+                    <span class="sr-only">Previous</span>
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <span id="pagination-numbers" class="page-item px-3 py-1 text-sm text-gray-700"></span>
+                <button id="next-page" class="page-link" disabled>
+                    <span class="sr-only">Next</span>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<!-- Detail Modal -->
+<div id="detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4 fade-in">
+    <div class="bg-white rounded-2xl shadow-xl max-w-4xl w-full mx-auto overflow-hidden">
+        <div class="flex justify-between items-center p-5 border-b border-gray-100">
+            <h3 class="text-xl font-semibold text-gray-800">Record Details</h3>
+            <button id="close-modal" class="btn-icon text-gray-400 hover:text-gray-600 focus:outline-none">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="px-5 py-6 space-y-6 max-h-[70vh] overflow-y-auto">
+            <div id="modal-document-container" class="slide-in space-y-2">
+                <h4 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Document</h4>
+                <div id="modal-document" class="p-4 bg-gray-50 rounded-xl border border-gray-100 text-gray-800"></div>
+            </div>
+            
+            <div id="modal-answer-container" class="slide-in space-y-2">
+                <h4 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Answer</h4>
+                <div id="modal-answer" class="p-4 bg-gray-50 rounded-xl border border-gray-100 text-gray-800"></div>
+            </div>
+            
+            <div id="modal-metadata-container" class="slide-in space-y-2">
+                <h4 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Metadata</h4>
+                <div class="metadata-view rounded-xl border border-gray-100">
+                    <pre id="modal-metadata" class="text-xs text-gray-800 whitespace-pre-wrap"></pre>
+                </div>
+            </div>
+            
+            <div id="modal-embedding-container" class="hidden slide-in space-y-2">
+                <h4 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Embedding Vector</h4>
+                <div class="embedding-view rounded-xl border border-gray-100">
+                    <pre id="modal-embedding" class="text-xs text-gray-800 whitespace-pre-wrap"></pre>
+                </div>
+            </div>
+            
+            <div id="modal-uri-container" class="hidden slide-in space-y-2">
+                <h4 class="text-xs font-medium text-gray-500 uppercase tracking-wider">URI</h4>
+                <div id="modal-uri" class="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                    <a id="modal-uri-link" href="#" target="_blank" class="text-primary-600 hover:text-primary-800 break-all"></a>
+                </div>
+            </div>
+            
+            <div id="modal-data-container" class="hidden slide-in space-y-2">
+                <h4 class="text-xs font-medium text-gray-500 uppercase tracking-wider">Binary Data (Base64)</h4>
+                <div class="binary-data-view rounded-xl border border-gray-100">
+                    <div id="modal-data" class="text-xs text-gray-800 break-all"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="px-5 py-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+            <button id="modal-close-btn" class="btn btn-secondary">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let active_collection = "{{ collection }}";
+    let page = 1;
+    let totalPages = 1;
+    let pageSize = 10;
+    let activeView = 'table';
+    let includeFields = ["documents", "metadatas"];
+    
+    // DOM Elements
+    const tableBody = document.getElementById('table-body');
+    const cardContainer = document.getElementById('card-container');
+    const tableView = document.getElementById('table-view');
+    const cardView = document.getElementById('card-view');
+    const viewTableBtn = document.getElementById('view-table');
+    const viewCardsBtn = document.getElementById('view-cards');
+    const loadingEl = document.getElementById('loading');
+    const emptyState = document.getElementById('empty-state');
+    const detailModal = document.getElementById('detail-modal');
+    const pageSizeSelect = document.getElementById('page-size');
+    const recordRange = document.getElementById('record-range');
+    const totalRecordsEl = document.getElementById('total-records');
+    const paginationNumbers = document.getElementById('pagination-numbers');
+    
+    // Field checkboxes
+    const includeDocuments = document.getElementById('include-documents');
+    const includeMetadatas = document.getElementById('include-metadatas');
+    const includeEmbeddings = document.getElementById('include-embeddings');
+    
+    // Init
+    document.addEventListener('DOMContentLoaded', () => {
+        loadRecords();
+        
+        // Event listeners
+        document.getElementById('filter-toggle').addEventListener('click', () => {
+            const filterSection = document.getElementById('filter-section');
+            filterSection.classList.toggle('hidden');
+            
+            // Add animation
+            if (!filterSection.classList.contains('hidden')) {
+                filterSection.classList.add('slide-in');
+                setTimeout(() => {
+                    filterSection.classList.remove('slide-in');
+                }, 300);
+            }
+        });
+        
+        document.getElementById('apply-filters').addEventListener('click', () => {
+            const btn = document.getElementById('apply-filters');
+            animateButton(btn);
+            applyFilters();
+        });
+        
+        document.getElementById('clear-filters').addEventListener('click', () => {
+            const btn = document.getElementById('clear-filters');
+            animateButton(btn);
+            clearFilters();
+        });
+        
+        document.getElementById('reset-filters').addEventListener('click', () => {
+            const btn = document.getElementById('reset-filters');
+            animateButton(btn);
+            clearFilters();
+        });
+        
+        viewTableBtn.addEventListener('click', () => switchView('table'));
+        viewCardsBtn.addEventListener('click', () => switchView('cards'));
+        
+        document.getElementById('prev-page').addEventListener('click', () => goToPage(page - 1));
+        document.getElementById('next-page').addEventListener('click', () => goToPage(page + 1));
+        
+        pageSizeSelect.addEventListener('change', () => {
+            pageSize = parseInt(pageSizeSelect.value);
+            loadRecords();
+        });
+        
+        document.getElementById('close-modal').addEventListener('click', closeModal);
+        document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+        
+        // Handle fix misspellings button with feedback
+        document.getElementById('fix-misspellings').addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Show loading state
+            const originalText = this.innerHTML;
+            this.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Fixing...`;
+            this.disabled = true;
+            this.classList.add('opacity-75');
+            
+            // Make API request
+            fetch(this.href)
+                .then(response => response.json())
+                .then(data => {
+                    // Reset button
+                    this.innerHTML = originalText;
+                    this.disabled = false;
+                    this.classList.remove('opacity-75');
+                    
+                    // Show feedback message
+                    showNotification(
+                        data.success ? 'success' : 'error',
+                        data.message
+                    );
+                    
+                    // Reload records if successful
+                    if (data.success && data.records_modified > 0) {
+                        loadRecords();
+                    }
+                })
+                .catch(error => {
+                    // Reset button on error
+                    this.innerHTML = originalText;
+                    this.disabled = false;
+                    this.classList.remove('opacity-75');
+                    
+                    // Show error message
+                    showNotification('error', 'An error occurred while fixing misspellings');
+                    console.error('Error:', error);
+                });
+        });
+    });
+    
+    // Animation helper
+    function animateButton(button) {
+        button.classList.add('animate-pulse');
+        setTimeout(() => {
+            button.classList.remove('animate-pulse');
+        }, 300);
+    }
+    
+    // Show notification
+    function showNotification(type, message) {
+        // Create notification element if it doesn't exist
+        let notification = document.getElementById('notification');
+        if (!notification) {
+            notification = document.createElement('div');
+            notification.id = 'notification';
+            notification.className = 'fixed top-4 right-4 z-50 p-4 rounded-xl shadow-lg transform transition-all duration-300 translate-x-full';
+            document.body.appendChild(notification);
+        }
+        
+        // Set notification style based on type
+        if (type === 'success') {
+            notification.className = 'fixed top-4 right-4 z-50 p-4 rounded-xl shadow-lg transform transition-all duration-300 bg-green-50 border border-green-200 text-green-700';
+        } else {
+            notification.className = 'fixed top-4 right-4 z-50 p-4 rounded-xl shadow-lg transform transition-all duration-300 bg-red-50 border border-red-200 text-red-700';
+        }
+        
+        // Set notification content
+        notification.innerHTML = `
+            <div class="flex items-center">
+                <div class="mr-3">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} text-xl"></i>
+                </div>
+                <div>
+                    <p>${message}</p>
+                </div>
+                <button class="ml-4 text-gray-500 hover:text-gray-700 focus:outline-none" onclick="this.parentElement.parentElement.classList.add('translate-x-full');">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        
+        // Show notification with animation
+        setTimeout(() => {
+            notification.classList.remove('translate-x-full');
+        }, 100);
+        
+        // Auto-hide after 5 seconds with animation
+        setTimeout(() => {
+            notification.classList.add('translate-x-full');
+            // Remove after animation completes
+            setTimeout(() => {
+                if (notification.classList.contains('translate-x-full')) {
+                    notification.remove();
+                }
+            }, 300);
+        }, 5000);
+    }
+    
+    // Close modal with animation
+    function closeModal() {
+        const modalContent = detailModal.querySelector('.bg-white');
+        modalContent.classList.add('scale-95', 'opacity-0');
+        modalContent.style.transition = 'all 0.2s ease-out';
+        
+        setTimeout(() => {
+            detailModal.classList.add('hidden');
+            modalContent.classList.remove('scale-95', 'opacity-0');
+        }, 200);
+    }
+    
+    // Load Records
+    function loadRecords() {
+        showLoading(true);
+        
+        // Update include fields from checkboxes
+        updateIncludeFields();
+        
+        fetch('/api/records', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                collection: active_collection,
+                page: page,
+                limit: pageSize,
+                filters: {},
+                include_fields: includeFields
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            showLoading(false);
+            
+            if (!data.records || data.records.length === 0) {
+                showEmptyState(true);
+                return;
+            }
+            
+            showEmptyState(false);
+            renderRecords(data.records);
+            updatePagination(data);
+        })
+        .catch(error => {
+            showLoading(false);
+            console.error('Error fetching records:', error);
+            showEmptyState(true);
+        });
+    }
+    
+    // Update include fields based on checkboxes
+    function updateIncludeFields() {
+        includeFields = [];
+        
+        if (includeDocuments.checked) {
+            includeFields.push("documents");
+        }
+        
+        if (includeMetadatas.checked) {
+            includeFields.push("metadatas");
+        }
+        
+        if (includeEmbeddings.checked) {
+            includeFields.push("embeddings");
+        }
+        
+        // Ensure at least one field is included
+        if (includeFields.length === 0) {
+            includeFields = ["documents"];
+            includeDocuments.checked = true;
+        }
+    }
+    
+    // Render records in current view
+    function renderRecords(records) {
+        // Clear existing content
+        tableBody.innerHTML = '';
+        cardContainer.innerHTML = '';
+        
+        records.forEach((record, index) => {
+            // Table row - Add staggered animation
+            const row = document.createElement('tr');
+            row.style.animation = `fadeIn 0.3s ease forwards ${index * 0.05}s`;
+            row.style.opacity = '0';
+            
+            let documentCell = '<td class="text-sm text-gray-500">Not included</td>';
+            if ('document' in record) {
+                documentCell = `<td class="text-sm text-gray-800 max-w-xs truncate">${escapeHtml(record.document)}</td>`;
+            }
+            
+            let answerCell = '<td class="text-sm text-gray-500">Not included</td>';
+            if ('answer' in record) {
+                answerCell = `<td class="text-sm text-gray-800 max-w-xs truncate">${escapeHtml(record.answer)}</td>`;
+            }
+            
+            row.innerHTML = `
+                <td class="text-sm text-gray-500">${record.id}</td>
+                ${documentCell}
+                ${answerCell}
+                <td>
+                    <button class="btn-icon text-primary-600 hover:text-primary-800 view-details" data-id="${record.id}">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+            
+            // Card - Add staggered animation
+            const card = document.createElement('div');
+            card.className = 'item-card';
+            card.style.animation = `fadeIn 0.3s ease forwards ${index * 0.05}s`;
+            card.style.opacity = '0';
+            
+            let documentSection = '';
+            if ('document' in record) {
+                documentSection = `
+                    <h3 class="text-lg font-medium text-gray-800 mb-2">Document</h3>
+                    <p class="text-sm text-gray-600 mb-4 line-clamp-3">${escapeHtml(record.document)}</p>
+                `;
+            }
+            
+            let answerSection = '';
+            if ('answer' in record) {
+                answerSection = `
+                    <h4 class="text-md font-medium text-gray-800 mb-2">Answer</h4>
+                    <p class="text-sm text-gray-600 line-clamp-2">${escapeHtml(record.answer)}</p>
+                `;
+            }
+            
+            card.innerHTML = `
+                <div class="p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            ID: ${record.id}
+                        </span>
+                        <button class="btn-icon text-primary-600 hover:text-primary-800 view-details" data-id="${record.id}">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    ${documentSection}
+                    ${answerSection}
+                </div>
+            `;
+            cardContainer.appendChild(card);
+        });
+        
+        // Add event listeners to view detail buttons
+        document.querySelectorAll('.view-details').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const recordId = parseInt(btn.getAttribute('data-id'));
+                const record = records.find(r => r.id === recordId);
+                if (record) {
+                    showRecordDetails(record);
+                }
+            });
+        });
+    }
+    
+    // Show record details in modal
+    function showRecordDetails(record) {
+        // Document
+        const modalDocument = document.getElementById('modal-document');
+        const modalDocumentContainer = document.getElementById('modal-document-container');
+        
+        if ('document' in record && record.document !== null) {
+            modalDocument.textContent = record.document;
+            modalDocumentContainer.classList.remove('hidden');
+        } else {
+            modalDocumentContainer.classList.add('hidden');
+        }
+        
+        // Answer
+        const modalAnswer = document.getElementById('modal-answer');
+        const modalAnswerContainer = document.getElementById('modal-answer-container');
+        
+        if (record.metadata && 'answer' in record.metadata && record.metadata.answer !== null) {
+            modalAnswer.textContent = record.metadata.answer;
+            modalAnswerContainer.classList.remove('hidden');
+        } else {
+            modalAnswerContainer.classList.add('hidden');
+        }
+        
+        // Metadata
+        const modalMetadata = document.getElementById('modal-metadata');
+        const modalMetadataContainer = document.getElementById('modal-metadata-container');
+        
+        if ('metadata' in record && record.metadata !== null) {
+            // Don't remove misspellings data from the metadata display anymore
+            // Format metadata with special handling for all fields including misspellings
+            const formattedMetadata = formatMetadata(record.metadata);
+            modalMetadata.innerHTML = formattedMetadata;
+            modalMetadataContainer.classList.remove('hidden');
+        } else {
+            modalMetadataContainer.classList.add('hidden');
+        }
+        
+        // Embedding
+        const modalEmbedding = document.getElementById('modal-embedding');
+        const modalEmbeddingContainer = document.getElementById('modal-embedding-container');
+        
+        if ('embedding' in record && record.embedding !== null) {
+            // Show the full embedding vector
+            modalEmbedding.textContent = JSON.stringify(record.embedding, null, 2);
+            modalEmbeddingContainer.classList.remove('hidden');
+        } else {
+            modalEmbeddingContainer.classList.add('hidden');
+        }
+        
+        // URI
+        const modalUri = document.getElementById('modal-uri');
+        const modalUriLink = document.getElementById('modal-uri-link');
+        const modalUriContainer = document.getElementById('modal-uri-container');
+        
+        if (record.metadata && 'uri' in record.metadata && record.metadata.uri) {
+            modalUriLink.href = record.metadata.uri;
+            modalUriLink.textContent = record.metadata.uri;
+            modalUriContainer.classList.remove('hidden');
+        } else {
+            modalUriContainer.classList.add('hidden');
+        }
+        
+        // Show modal with animation
+        detailModal.classList.remove('hidden');
+        const modalContent = detailModal.querySelector('.bg-white');
+        modalContent.classList.add('scale-95', 'opacity-0');
+        modalContent.style.transition = 'all 0.2s ease-out';
+        
+        setTimeout(() => {
+            modalContent.classList.remove('scale-95', 'opacity-0');
+            modalContent.style.transform = 'scale(1)';
+            modalContent.style.opacity = '1';
+        }, 10);
+    }
+    
+    function formatMetadata(metadata) {
+        let html = '';
+        
+        // Format each key-value pair
+        for (const [key, value] of Object.entries(metadata)) {
+            html += `<div class="metadata-item"><strong class="text-gray-700">${key}:</strong> `;
+            
+            if (key === 'common_misspellings' || key === 'misspellings_lookup') {
+                // Display misspellings data in the same format as other metadata
+                if (!value || (typeof value === 'object' && Object.keys(value).length === 0)) {
+                    html += `<span class="text-gray-500 italic">No ${key.replace('_', ' ')} defined</span>`;
+                } else if (typeof value === 'string') {
+                    try {
+                        // Try to parse if it's a JSON string
+                        let parsed = JSON.parse(value);
+                        
+                        // For double-escaped strings, parse again
+                        if (typeof parsed === 'string') {
+                            try {
+                                parsed = JSON.parse(parsed);
+                            } catch (e) {
+                                // Keep as first-level parsed if second parse fails
+                                console.error(`Error parsing nested ${key}`, e);
+                            }
+                        }
+                        
+                        if (!parsed || (typeof parsed === 'object' && Object.keys(parsed).length === 0)) {
+                            html += `<span class="text-gray-500 italic">No ${key.replace('_', ' ')} defined</span>`;
+                        } else {
+                            // Display as JSON like other object fields
+                            html += `<pre class="metadata-json">${escapeHtml(JSON.stringify(parsed, null, 2))}</pre>`;
+                        }
+                    } catch (e) {
+                        // If not valid JSON, display as is
+                        console.error(`Error parsing ${key}`, e);
+                        html += `<pre class="metadata-json">${escapeHtml(value)}</pre>`;
+                    }
+                } else if (typeof value === 'object') {
+                    // Display as JSON like other object fields
+                    html += `<pre class="metadata-json">${escapeHtml(JSON.stringify(value, null, 2))}</pre>`;
+                } else {
+                    html += `<span>${escapeHtml(String(value))}</span>`;
+                }
+            } else {
+                // Handle other metadata
+                if (typeof value === 'object' && value !== null) {
+                    html += `<pre class="metadata-json">${escapeHtml(JSON.stringify(value, null, 2))}</pre>`;
+                } else {
+                    html += `<span>${escapeHtml(String(value))}</span>`;
+                }
+            }
+            
+            html += `</div>`;
+        }
+        
+        return html;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Switch between table and card views
+    function switchView(view) {
+        activeView = view;
+        
+        if (view === 'table') {
+            // Add animation to view switch
+            cardView.style.opacity = '1';
+            cardView.style.transition = 'opacity 0.2s ease-out';
+            cardView.style.opacity = '0';
+            
+            setTimeout(() => {
+                tableView.classList.remove('hidden');
+                cardView.classList.add('hidden');
+                
+                // Reset and animate in
+                tableView.style.opacity = '0';
+                tableView.style.transition = 'opacity 0.2s ease-in';
+                
+                setTimeout(() => {
+                    tableView.style.opacity = '1';
+                }, 50);
+            }, 200);
+            
+            viewTableBtn.classList.add('active-view');
+            viewCardsBtn.classList.remove('active-view');
+        } else {
+            // Add animation to view switch
+            tableView.style.opacity = '1';
+            tableView.style.transition = 'opacity 0.2s ease-out';
+            tableView.style.opacity = '0';
+            
+            setTimeout(() => {
+                tableView.classList.add('hidden');
+                cardView.classList.remove('hidden');
+                
+                // Reset and animate in
+                cardView.style.opacity = '0';
+                cardView.style.transition = 'opacity 0.2s ease-in';
+                
+                setTimeout(() => {
+                    cardView.style.opacity = '1';
+                }, 50);
+            }, 200);
+            
+            viewTableBtn.classList.remove('active-view');
+            viewCardsBtn.classList.add('active-view');
+        }
+    }
+    
+    // Apply filters
+    function applyFilters() {
+        // Update include fields from checkboxes
+        updateIncludeFields();
+        
+        // Reset to first page
+        page = 1;
+        
+        // Load records with updated fields
+        loadRecords();
+    }
+    
+    // Clear filters
+    function clearFilters() {
+        // Reset include fields checkboxes
+        includeDocuments.checked = true;
+        includeMetadatas.checked = true;
+        includeEmbeddings.checked = false;
+        
+        // Update include fields
+        updateIncludeFields();
+        
+        // Reset to first page
+        page = 1;
+        
+        // Load records
+        loadRecords();
+    }
+    
+    // Update pagination controls
+    function updatePagination(data) {
+        totalPages = data.total_pages;
+        const totalRecords = data.total_records;
+        
+        // Update record count
+        const start = totalRecords > 0 ? (page - 1) * pageSize + 1 : 0;
+        const end = Math.min(page * pageSize, totalRecords);
+        recordRange.textContent = `${start}-${end}`;
+        totalRecordsEl.textContent = totalRecords;
+        
+        // Enable/disable pagination buttons
+        document.getElementById('prev-page').disabled = page <= 1;
+        document.getElementById('next-page').disabled = page >= totalPages;
+        
+        // Update page numbers
+        updatePageNumbers();
+    }
+    
+    // Update page number buttons
+    function updatePageNumbers() {
+        paginationNumbers.innerHTML = '';
+        
+        // Show current page number
+        const pageSpan = document.createElement('span');
+        pageSpan.className = 'px-2';
+        pageSpan.textContent = `Page ${page} of ${totalPages}`;
+        paginationNumbers.appendChild(pageSpan);
+    }
+    
+    // Go to specific page
+    function goToPage(newPage) {
+        if (newPage >= 1 && newPage <= totalPages) {
+            // Add animation to page transition
+            const contentElement = activeView === 'table' ? tableView : cardView;
+            contentElement.style.transition = 'opacity 0.2s ease-out';
+            contentElement.style.opacity = '0';
+            
+            setTimeout(() => {
+                page = newPage;
+                loadRecords();
+                
+                setTimeout(() => {
+                    contentElement.style.transition = 'opacity 0.2s ease-in';
+                    contentElement.style.opacity = '1';
+                }, 300);
+            }, 200);
+        }
+    }
+    
+    // Show/hide loading state
+    function showLoading(show) {
+        if (show) {
+            loadingEl.classList.remove('hidden');
+            tableBody.classList.add('opacity-50');
+            cardContainer.classList.add('opacity-50');
+        } else {
+            // Add fade-out animation to loading element
+            loadingEl.style.transition = 'opacity 0.3s ease-out';
+            loadingEl.style.opacity = '0';
+            
+            setTimeout(() => {
+                loadingEl.classList.add('hidden');
+                loadingEl.style.opacity = '1';
+                tableBody.classList.remove('opacity-50');
+                cardContainer.classList.remove('opacity-50');
+            }, 300);
+        }
+    }
+    
+    // Show/hide empty state
+    function showEmptyState(show) {
+        if (show) {
+            emptyState.classList.remove('hidden');
+            tableBody.classList.add('hidden');
+            
+            // Add fade-in animation
+            emptyState.style.opacity = '0';
+            emptyState.style.transition = 'opacity 0.3s ease-in';
+            
+            setTimeout(() => {
+                emptyState.style.opacity = '1';
+            }, 50);
+        } else {
+            // Add fade-out animation
+            emptyState.style.transition = 'opacity 0.3s ease-out';
+            emptyState.style.opacity = '0';
+            
+            setTimeout(() => {
+                emptyState.classList.add('hidden');
+                tableBody.classList.remove('hidden');
+            }, 300);
+        }
+    }
+</script>
+{% endblock %} 

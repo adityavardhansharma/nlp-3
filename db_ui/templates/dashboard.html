@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+
+{% block title %}Vector DB Explorer{% endblock %}
+
+{% block head %}
+<style>
+    /* Design System */
+    :root {
+        --color-primary: #4f46e5;
+        --color-primary-light: #818cf8;
+        --color-primary-dark: #3730a3;
+        --color-text-primary: #111827;
+        --color-text-secondary: #4b5563;
+        --color-text-tertiary: #9ca3af;
+        --color-background: #f3f4f6;
+        --color-surface: #ffffff;
+        --color-border: #e5e7eb;
+        --color-border-light: #f3f4f6;
+        --color-success: #10b981;
+        --color-warning: #f59e0b;
+        --color-error: #ef4444;
+        --color-info: #3b82f6;
+        --radius-sm: 6px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --radius-xl: 16px;
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        --transition-all: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    body {
+        background-color: var(--color-background);
+        color: var(--color-text-primary);
+    }
+    
+    .page-header {
+        margin-bottom: 2rem;
+    }
+    
+    .page-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--color-text-primary);
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+    }
+    
+    .page-title i {
+        color: var(--color-primary);
+        margin-right: 0.75rem;
+    }
+    
+    .page-description {
+        color: var(--color-text-secondary);
+        max-width: 36rem;
+    }
+    
+    /* Card styling */
+    .dashboard-card {
+        background-color: var(--color-surface);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid var(--color-border-light);
+        overflow: hidden;
+        transition: var(--transition-all);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-xl);
+    }
+    
+    .card-header {
+        padding: 1.25rem;
+        border-bottom: 1px solid var(--color-border-light);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+    
+    .card-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        margin-bottom: 0.25rem;
+    }
+    
+    .card-badge {
+        background-color: var(--color-primary-light);
+        color: var(--color-primary-dark);
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+    }
+    
+    .card-badge i {
+        margin-right: 0.25rem;
+    }
+    
+    .card-body {
+        padding: 1.25rem;
+        flex: 1;
+    }
+    
+    .card-footer {
+        padding: 1.25rem;
+        border-top: 1px solid var(--color-border-light);
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    /* Stat item */
+    .stat-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+    
+    .stat-icon {
+        width: 2rem;
+        height: 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-md);
+        background-color: rgba(79, 70, 229, 0.1);
+        color: var(--color-primary);
+        margin-right: 0.75rem;
+        flex-shrink: 0;
+    }
+    
+    /* Button styling */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--radius-md);
+        font-weight: 500;
+        transition: var(--transition-all);
+        cursor: pointer;
+        box-shadow: var(--shadow-sm);
+        border: none;
+    }
+    
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+    
+    .btn:active {
+        transform: translateY(0);
+    }
+    
+    .btn-primary {
+        background-color: var(--color-primary);
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background-color: var(--color-primary-dark);
+    }
+    
+    .btn-secondary {
+        background-color: white;
+        color: var(--color-text-secondary);
+        border: 1px solid var(--color-border);
+    }
+    
+    .btn-secondary:hover {
+        background-color: var(--color-background);
+        color: var(--color-text-primary);
+        border-color: var(--color-primary-light);
+    }
+    
+    /* Empty state */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        background-color: var(--color-surface);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--color-border-light);
+    }
+    
+    .empty-icon {
+        width: 5rem;
+        height: 5rem;
+        margin: 0 auto 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9999px;
+        background-color: var(--color-warning);
+        background-opacity: 0.1;
+        color: var(--color-warning);
+    }
+    
+    .empty-icon i {
+        font-size: 2.5rem;
+    }
+    
+    /* Animations */
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes slideIn {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    
+    @keyframes scaleIn {
+        from { transform: scale(0.95); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+    }
+    
+    .fade-in {
+        animation: fadeIn 0.4s ease-in-out;
+    }
+    
+    .slide-in {
+        animation: slideIn 0.4s ease-in-out;
+    }
+    
+    .scale-in {
+        animation: scaleIn 0.4s ease-in-out;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="slide-in p-6 max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="fas fa-database"></i>
+            Vector Database Explorer
+        </h1>
+        <p class="page-description">Manage and query your vector collections to search semantically similar content</p>
+    </div>
+
+    <!-- Collections Grid -->
+    <div class="fade-in grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for collection in collections %}
+        <div class="dashboard-card" style="animation-delay: {{ loop.index0 * 0.05 }}s">
+            <div class="card-header">
+                <div>
+                    <h3 class="card-title">{{ collection }}</h3>
+                    <p class="text-sm text-gray-500">Vector database collection</p>
+                </div>
+                <div class="card-badge">
+                    <i class="fas fa-layer-group"></i>
+                    {{ stats[collection].count }} records
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="space-y-3">
+                    <div class="stat-item">
+                        <div class="stat-icon">
+                            <i class="fas fa-memory"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 uppercase font-medium">Storage Type</div>
+                            <div class="text-sm font-medium">Persistent</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-item">
+                        <div class="stat-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 uppercase font-medium">Last Updated</div>
+                            <div class="text-sm font-medium">{{ now.strftime('%Y-%m-%d') }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('collection_view', collection_name=collection) }}" 
+                   class="btn btn-primary">
+                    <i class="fas fa-table mr-2"></i>
+                    View Records
+                </a>
+                <a href="{{ url_for('search_page') }}?collection={{ collection }}" 
+                   class="btn btn-secondary">
+                    <i class="fas fa-search mr-2"></i>
+                    Search
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-span-full">
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h2 class="text-xl font-semibold text-gray-800 mb-2">No Collections Found</h2>
+                <p class="text-gray-600 max-w-md mx-auto mb-6">Create collections in your Chroma database to get started with storing and querying vector embeddings.</p>
+                <a href="https://docs.trychroma.com/usage-guide" target="_blank" class="btn btn-secondary">
+                    <i class="fas fa-book mr-2"></i>
+                    View Documentation
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Add animations to dashboard cards
+    document.addEventListener('DOMContentLoaded', function() {
+        const cards = document.querySelectorAll('.dashboard-card');
+        cards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.animation = `fadeIn 0.5s ease forwards ${index * 0.05}s`;
+        });
+    });
+</script>
+{% endblock %} 
